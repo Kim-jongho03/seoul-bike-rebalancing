@@ -1,66 +1,132 @@
 <!doctype html>
 <html lang="ko"><head><meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>따릉이 재배치 최적 경로</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>따릉이 재배치 · 차량별 최적 경로</title>
 <style>
-body {margin:0;font-family:Arial,sans-serif;background:#fff}
-#header {padding:12px 16px;font-size:17px;font-weight:bold}
-#status {padding:0 16px 10px;color:#b71c1c;font-size:13px}
-#map {width:100%;height:78vh;min-height:480px}
-#legend {padding:12px 16px;font-size:14px;line-height:1.8}
-.dot {display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:5px}
+*{box-sizing:border-box}body{margin:0;color:#172033;font-family:Arial,'Malgun Gothic',sans-serif;background:#f5f7fb}
+.header{padding:18px 22px;background:white;border-bottom:1px solid #e5e7eb}
+h1{font-size:20px;margin:0 0 6px}.hint{color:#64748b;font-size:13px;margin:0}
+.shell{display:grid;grid-template-columns:minmax(300px,370px) minmax(0,1fr);min-height:78vh}
+.panel{background:white;padding:20px;border-right:1px solid #e5e7eb;overflow-y:auto;max-height:82vh}
+.panel label{display:block;font-weight:700;margin-bottom:9px;font-size:14px}
+select{width:100%;padding:12px;border:1px solid #b6c2d1;border-radius:9px;font-size:15px;background:white}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:16px 0}
+.stat{padding:12px;border-radius:9px;background:#f1f5f9}.stat b{display:block;font-size:18px;margin-top:5px}
+.stat small{color:#64748b;font-size:12px}
+.subhead{font-weight:700;font-size:15px;margin:20px 0 10px}
+.visit{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #edf0f3}
+.num{flex-shrink:0;display:inline-flex;justify-content:center;align-items:center;width:29px;height:29px;border-radius:50%;background:#1e293b;color:white;font-size:12px;font-weight:700}
+.visitname{font-weight:600;font-size:14px}.visitsub{font-size:12px;color:#64748b;margin-top:4px}
+.mapwrap{min-width:0;position:relative}#map{width:100%;height:82vh;min-height:580px}
+#status{padding:8px 22px;color:#b91c1c;font-size:13px;background:white}
+.footer{background:white;padding:12px 20px;font-size:12px;color:#64748b}
+.arrow{color:#fff;text-shadow:0 1px 2px #000,0 0 2px #000;font-size:24px;line-height:24px;pointer-events:none;font-weight:bold}
+.stop-badge{background:white;color:#111827;min-width:25px;height:25px;border:2px solid #111827;border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;box-shadow:0 1px 6px #0003;white-space:nowrap}
+.legend{font-size:12px;color:#64748b;margin-top:12px;line-height:1.7}
+@media(max-width:760px){.shell{grid-template-columns:1fr}.panel{max-height:none;border-right:0}#map{height:65vh;min-height:430px}}
 </style>
-<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=f9ca362d1eb07a0c7a0f9454949f4e0a&autoload=false"></script>
+<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=__JS_KEY__&autoload=false"></script>
 </head><body>
-<div id="header">따릉이 재배치: 차량별 최적 경로</div>
-<div id="status"></div><div id="map"></div><div id="legend"></div>
+<div class="header"><h1>따릉이 재배치 · 차량별 최적 경로</h1><p class="hint">차량을 선택하면 해당 차량의 이동 경로·방향·방문 순서만 표시됩니다.</p></div>
+<div id="status"></div>
+<div class="shell">
+<aside class="panel">
+<label for="vehicleSelect">확인할 차량</label><select id="vehicleSelect"></select>
+<div id="stats" class="stats"></div>
+<div class="subhead">방문 순서</div><div id="visits"></div>
+<div class="legend">● 빨강: 수거 대여소　● 파랑: 배송 대여소　● 회색: 균형<br>지도 숫자 = 실제 대여소 방문 순번<br>화살표 = 도로 경로의 진행 방향</div>
+</aside><div class="mapwrap"><div id="map"></div></div>
+</div><div class="footer">Gurobi 작업완료시간은 차량 이동·상하차·주정차 시간을 포함합니다. 카카오 주행시간은 도로 이동시간만 나타냅니다.</div>
 <script>
-const data = {"depot": {"lat": 37.654, "lon": 127.057}, "stations": [{"name": "태릉입구역 3번출구", "lat": 37.6192, "lon": 127.075, "current": 20, "target": 10, "type": "pickup", "quantity": 10}, {"name": "공릉역 1번출구 앞", "lat": 37.6266, "lon": 127.073, "current": 25, "target": 10, "type": "pickup", "quantity": 15}, {"name": "화랑대역 2번출구 앞", "lat": 37.6204, "lon": 127.084, "current": 15, "target": 20, "type": "delivery", "quantity": 5}, {"name": "과기대 입구(우)", "lat": 37.6299, "lon": 127.077, "current": 10, "target": 20, "type": "delivery", "quantity": 10}, {"name": "서울여대 남문", "lat": 37.6253, "lon": 127.088, "current": 5, "target": 7, "type": "delivery", "quantity": 2}, {"name": "태릉입구역 8번출구", "lat": 37.6174, "lon": 127.075, "current": 15, "target": 10, "type": "pickup", "quantity": 5}, {"name": "삼육대 입구", "lat": 37.6385, "lon": 127.108, "current": 5, "target": 10, "type": "delivery", "quantity": 5}, {"name": "공릉 1단지 아파트", "lat": 37.6311, "lon": 127.07, "current": 15, "target": 15, "type": "balanced", "quantity": 0}, {"name": "육군사관학교 앞", "lat": 37.6232, "lon": 127.09, "current": 5, "target": 15, "type": "delivery", "quantity": 10}, {"name": "삼육대 도서관", "lat": 37.6428, "lon": 127.107, "current": 5, "target": 10, "type": "delivery", "quantity": 5}, {"name": "삼육대 제3과학관", "lat": 37.6427, "lon": 127.108, "current": 6, "target": 7, "type": "delivery", "quantity": 1}, {"name": "태릉입구역 5번출구", "lat": 37.6183, "lon": 127.076, "current": 30, "target": 20, "type": "pickup", "quantity": 10}, {"name": "원자력병원", "lat": 37.6284, "lon": 127.0822704, "current": 8, "target": 10, "type": "delivery", "quantity": 2}], "routes": [{"vehicle": 1, "color": "#2E7D32", "stops": ["DEPOT", "2", "12", "2", "9", "4", "7", "9", "3", "6", "4", "9", "12", "1", "10", "2", "3", "12", "9", "12", "3", "4", "7", "10", "4", "7", "12", "1", "9", "5", "1", "4", "DEPOT"], "coords": [[37.654, 127.057], [37.6266, 127.073], [37.6183, 127.076], [37.6266, 127.073], [37.6232, 127.09], [37.6299, 127.077], [37.6385, 127.108], [37.6232, 127.09], [37.6204, 127.084], [37.6174, 127.075], [37.6299, 127.077], [37.6232, 127.09], [37.6183, 127.076], [37.6192, 127.075], [37.6428, 127.107], [37.6266, 127.073], [37.6204, 127.084], [37.6183, 127.076], [37.6232, 127.09], [37.6183, 127.076], [37.6204, 127.084], [37.6299, 127.077], [37.6385, 127.108], [37.6428, 127.107], [37.6299, 127.077], [37.6385, 127.108], [37.6183, 127.076], [37.6192, 127.075], [37.6232, 127.09], [37.6253, 127.088], [37.6192, 127.075], [37.6299, 127.077], [37.654, 127.057]]}, {"vehicle": 2, "color": "#7B1FA2", "stops": ["DEPOT", "2", "9", "2", "6", "1", "6", "10", "13", "12", "4", "3", "6", "9", "1", "12", "1", "3", "4", "13", "10", "12", "2", "9", "4", "2", "5", "11", "1", "7", "4", "2", "4", "DEPOT"], "coords": [[37.654, 127.057], [37.6266, 127.073], [37.6232, 127.09], [37.6266, 127.073], [37.6174, 127.075], [37.6192, 127.075], [37.6174, 127.075], [37.6428, 127.107], [37.6284, 127.0822704], [37.6183, 127.076], [37.6299, 127.077], [37.6204, 127.084], [37.6174, 127.075], [37.6232, 127.09], [37.6192, 127.075], [37.6183, 127.076], [37.6192, 127.075], [37.6204, 127.084], [37.6299, 127.077], [37.6284, 127.0822704], [37.6428, 127.107], [37.6183, 127.076], [37.6266, 127.073], [37.6232, 127.09], [37.6299, 127.077], [37.6266, 127.073], [37.6253, 127.088], [37.6427, 127.108], [37.6192, 127.075], [37.6385, 127.108], [37.6299, 127.077], [37.6266, 127.073], [37.6299, 127.077], [37.654, 127.057]]}], "actualRoad": false};
-const statusNode = document.getElementById('status');
-function showError(msg) { statusNode.textContent = msg; }
-if (!window.kakao || !kakao.maps) {
-  showError('카카오 지도 SDK 로딩 실패: JavaScript 키와 웹 도메인 등록을 확인하세요.');
-} else {
- kakao.maps.load(function() {
-  try {
-    const center = new kakao.maps.LatLng(data.depot.lat, data.depot.lon);
-    const map = new kakao.maps.Map(document.getElementById('map'), {center:center, level:5});
-    const bounds = new kakao.maps.LatLngBounds();
-    const info = new kakao.maps.InfoWindow({removable:true});
-    const depotMarker = new kakao.maps.Marker({position:center, map:map});
-    kakao.maps.event.addListener(depotMarker,'click', function() {
-      info.setContent('<div style="padding:8px">DEPOT (출발·복귀)</div>');
-      info.open(map,depotMarker);
-    });
-    bounds.extend(center);
-
-    for (const s of data.stations) {
-      const pos = new kakao.maps.LatLng(s.lat,s.lon);
-      const color = s.type === 'pickup' ? '#d32f2f' : s.type === 'delivery' ? '#1976d2' : '#757575';
-      const circle = new kakao.maps.Circle({map:map, center:pos,radius:15,
-             strokeWeight:2,strokeColor:color,fillColor:color,fillOpacity:0.75});
-      kakao.maps.event.addListener(circle,'click',function() {
-        const txt = s.name + ' | 현재 ' + s.current + '대 → 목표 ' + s.target + '대';
-        info.setContent('<div style="padding:9px;white-space:nowrap">'+
-          txt.replace(/[&<>"']/g, v=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[v]))+'</div>');
-        info.setPosition(pos);info.open(map);
-      });
-      bounds.extend(pos);
-    }
-    let legend = '<b>빨강: 수거 대여소 / 파랑: 배송 대여소 / 회색: 균형</b>';
-    for (const route of data.routes) {
-      const pts = route.coords.map(p => new kakao.maps.LatLng(p[0],p[1]));
-      if (pts.length < 2) continue;
-      const line = new kakao.maps.Polyline({map:map,path:pts,
-             strokeWeight:5,strokeColor:route.color,strokeOpacity:0.8});
-      pts.forEach(p=>bounds.extend(p));
-      legend += '<div><span class="dot" style="background:'+route.color+'"></span>'+ 
-                '차량 '+route.vehicle+' ('+(route.stops.length-2)+' 경유 방문)</div>';
-    }
-    document.getElementById('legend').innerHTML = legend;
-    map.setBounds(bounds);
-    if (!data.actualRoad) showError('주의: 현재 estimate 모드로, 직선 연결은 실제 도로 경로가 아닙니다.');
-  } catch(e) { showError('지도 표시 오류: '+ e.message); }
- });
-}
+const data=__PAYLOAD__;
+const byId=(id)=>document.getElementById(id);
+const statusNode=byId('status');
+const escapeHTML=(s)=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=(v,n=1)=>(v===null||v===undefined)?'—':Number(v).toFixed(n);
+function setError(text){statusNode.textContent=text;}
+const select=byId('vehicleSelect');
+for(const r of data.routes){const o=document.createElement('option');o.value=String(r.vehicle);o.textContent='차량 '+r.vehicle;select.appendChild(o);}
+if(!window.kakao||!kakao.maps){setError('카카오 지도 SDK 로딩 실패: JavaScript 키와 등록된 사이트 도메인을 확인하세요.');}
+else{kakao.maps.load(function(){
+ try{
+ const center=new kakao.maps.LatLng(data.depot.lat,data.depot.lon);
+ const map=new kakao.maps.Map(byId('map'),{center:center,level:5});
+ const info=new kakao.maps.InfoWindow({removable:true});
+ let active=[];
+ const depotMarker=new kakao.maps.Marker({map:map,position:center,title:'Depot'});
+ kakao.maps.event.addListener(depotMarker,'click',()=>{info.setContent('<div style="padding:9px">Depot (출발·복귀)</div>');info.open(map,depotMarker);});
+ // 13개 대여소 위치는 항상 보이게 하되, 차량 선택 시 경로·순번만 교체
+ const stationCircles=[];
+ for(const s of data.stations){
+   const pos=new kakao.maps.LatLng(s.lat,s.lon);
+   const c=s.type==='pickup'?'#d32f2f':s.type==='delivery'?'#1976d2':'#757575';
+   const circle=new kakao.maps.Circle({map:map,center:pos,radius:12,strokeWeight:2,strokeColor:c,fillColor:c,fillOpacity:0.75});
+   kakao.maps.event.addListener(circle,'click',()=>{
+      info.setContent('<div style="padding:9px;white-space:nowrap">'+escapeHTML(s.name)+'<br>현재 '+s.current+'대 → 목표 '+s.target+'대</div>');
+      info.setPosition(pos);info.open(map);
+   });stationCircles.push(circle);
+ }
+ function addActive(item){active.push(item);}
+ function clearActive(){for(const item of active)item.setMap(null);active=[];info.close();}
+ // 도로 좌표 거리 누적으로 방향 화살표를 균등하게 배치
+ function arrowsOnRoute(coords,color){
+   if(coords.length<3)return;
+   const dist=[0];let total=0;
+   for(let i=1;i<coords.length;i++){
+      const a=coords[i-1],b=coords[i];const lat=(a[0]+b[0])*Math.PI/360;
+      const dx=(b[1]-a[1])*Math.cos(lat),dy=(b[0]-a[0]);
+      total+=Math.hypot(dx,dy);dist.push(total);
+   }
+   if(total<=0)return;
+   const count=Math.max(2,Math.min(12,Math.ceil(total*111000/650)));
+   for(let j=1;j<=count;j++){
+     const target=total*j/(count+1);
+     let i=1;while(i<dist.length-1 && dist[i]<target)i++;
+     const a=coords[i-1],b=coords[i],span=dist[i]-dist[i-1];if(span<=0)continue;
+     const t=Math.max(0,Math.min(1,(target-dist[i-1])/span));
+     const lat=a[0]+(b[0]-a[0])*t,lon=a[1]+(b[1]-a[1])*t;
+     const dx=(b[1]-a[1])*Math.cos(lat*Math.PI/180),dy=-(b[0]-a[0]);
+     const angle=Math.atan2(dy,dx)*180/Math.PI;
+     const element=document.createElement('div');element.className='arrow';element.textContent='➤';
+     element.style.color=color;element.style.transform='rotate('+angle+'deg)';
+     const arrow=new kakao.maps.CustomOverlay({map:map,position:new kakao.maps.LatLng(lat,lon),content:element,xAnchor:0.5,yAnchor:0.5,zIndex:7});
+     addActive(arrow);
+   }
+ }
+ function renderVehicle(){
+   clearActive();const r=data.routes.find(v=>String(v.vehicle)===select.value);if(!r)return;
+   const bounds=new kakao.maps.LatLngBounds();
+   const pts=r.coords.map(p=>new kakao.maps.LatLng(p[0],p[1]));
+   const line=new kakao.maps.Polyline({map:map,path:pts,strokeWeight:6,strokeColor:r.color,strokeOpacity:0.88,zIndex:3});addActive(line);
+   pts.forEach(p=>bounds.extend(p));arrowsOnRoute(r.coords,r.color);
+   const occurrence={};
+   r.visits.forEach((v,i)=>{
+     const pos=new kakao.maps.LatLng(v.lat,v.lon);bounds.extend(pos);
+     if(i===0||i===r.visits.length-1)return; // Depot는 별도 마커
+     const count=occurrence[v.label]||0;occurrence[v.label]=count+1;
+     const badge=document.createElement('div');badge.className='stop-badge';
+     badge.style.borderColor=r.color;badge.textContent=String(i);
+     // 같은 대여소 재방문이면 순번 마커가 완전히 겹치지 않도록 옆으로 이동
+     badge.style.transform='translateX('+(count*22)+'px)';
+     badge.title=i+'. '+v.name;
+     const overlay=new kakao.maps.CustomOverlay({map:map,position:pos,content:badge,xAnchor:0.5,yAnchor:1.3,zIndex:9});addActive(overlay);
+   });
+   byId('stats').innerHTML=
+      '<div class="stat"><small>방문 대여소 수 (재방문 포함)</small><b>'+Math.max(0,r.visits.length-2)+'</b></div>'+
+      '<div class="stat"><small>도로 주행거리</small><b>'+fmt(r.drive_km,2)+' km</b></div>'+
+      '<div class="stat"><small>카카오 도로 주행시간</small><b>'+fmt(r.drive_min,1)+' 분</b></div>'+
+      '<div class="stat"><small>Gurobi 완료시간</small><b>'+fmt(r.completion_min,1)+' 분</b></div>';
+   byId('visits').innerHTML=r.visits.map((v,i)=>{
+     const tag=i===0?'출발':i===r.visits.length-1?'복귀':'방문 '+i;
+     const extra=v.type==='pickup'?'수거 대상 대여소':v.type==='delivery'?'배송 대상 대여소':v.type==='balanced'?'재고 균형':'Depot';
+     const stocks=(v.current===null)?'':' · 현재 '+v.current+'대 / 목표 '+v.target+'대';
+     return '<div class="visit"><span class="num" style="background:'+r.color+'">'+i+'</span><div><div class="visitname">'+escapeHTML(v.name)+'</div><div class="visitsub">'+tag+' · '+extra+stocks+'</div></div></div>';
+   }).join('');
+   map.setBounds(bounds);setTimeout(()=>map.relayout(),0);
+ }
+ select.addEventListener('change',renderVehicle);
+ if(data.routes.length){select.value=String(data.routes[0].vehicle);renderVehicle();}
+ if(!data.actualRoad)setError('주의: estimate 모드이므로 직선 연결은 실제 도로 경로가 아닙니다.');
+ }catch(e){console.error(e);setError('지도 표시 오류: '+e.message);}
+});}
 </script></body></html>
