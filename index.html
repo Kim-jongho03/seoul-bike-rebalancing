@@ -1,132 +1,156 @@
 <!doctype html>
-<html lang="ko"><head><meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>따릉이 재배치 · 차량별 최적 경로</title>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>따릉이 재배치 | 차량별 최적 경로</title>
 <style>
-*{box-sizing:border-box}body{margin:0;color:#172033;font-family:Arial,'Malgun Gothic',sans-serif;background:#f5f7fb}
-.header{padding:18px 22px;background:white;border-bottom:1px solid #e5e7eb}
-h1{font-size:20px;margin:0 0 6px}.hint{color:#64748b;font-size:13px;margin:0}
-.shell{display:grid;grid-template-columns:minmax(300px,370px) minmax(0,1fr);min-height:78vh}
-.panel{background:white;padding:20px;border-right:1px solid #e5e7eb;overflow-y:auto;max-height:82vh}
-.panel label{display:block;font-weight:700;margin-bottom:9px;font-size:14px}
-select{width:100%;padding:12px;border:1px solid #b6c2d1;border-radius:9px;font-size:15px;background:white}
-.stats{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:16px 0}
-.stat{padding:12px;border-radius:9px;background:#f1f5f9}.stat b{display:block;font-size:18px;margin-top:5px}
-.stat small{color:#64748b;font-size:12px}
-.subhead{font-weight:700;font-size:15px;margin:20px 0 10px}
-.visit{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #edf0f3}
-.num{flex-shrink:0;display:inline-flex;justify-content:center;align-items:center;width:29px;height:29px;border-radius:50%;background:#1e293b;color:white;font-size:12px;font-weight:700}
-.visitname{font-weight:600;font-size:14px}.visitsub{font-size:12px;color:#64748b;margin-top:4px}
-.mapwrap{min-width:0;position:relative}#map{width:100%;height:82vh;min-height:580px}
-#status{padding:8px 22px;color:#b91c1c;font-size:13px;background:white}
-.footer{background:white;padding:12px 20px;font-size:12px;color:#64748b}
-.arrow{color:#fff;text-shadow:0 1px 2px #000,0 0 2px #000;font-size:24px;line-height:24px;pointer-events:none;font-weight:bold}
-.stop-badge{background:white;color:#111827;min-width:25px;height:25px;border:2px solid #111827;border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;box-shadow:0 1px 6px #0003;white-space:nowrap}
-.legend{font-size:12px;color:#64748b;margin-top:12px;line-height:1.7}
-@media(max-width:760px){.shell{grid-template-columns:1fr}.panel{max-height:none;border-right:0}#map{height:65vh;min-height:430px}}
+*{box-sizing:border-box}
+body{margin:0;background:#f5f7fb;color:#172033;font-family:Arial,'Malgun Gothic',sans-serif}
+header{background:#fff;padding:17px 22px;border-bottom:1px solid #ddd}
+h1{font-size:21px;margin:0 0 7px}header p{margin:0;color:#64748b;font-size:14px}
+#status{background:#fff;color:#b91c1c;font-size:13px;padding:8px 22px;min-height:31px;white-space:pre-wrap}
+.layout{display:grid;grid-template-columns:360px minmax(0,1fr);min-height:75vh}
+aside{background:#fff;padding:20px;border-right:1px solid #ddd;max-height:80vh;overflow:auto}
+label{font-weight:bold;display:block;margin-bottom:8px}
+select{width:100%;background:#fff;color:#172033;border:1px solid #cbd5e1;border-radius:8px;padding:12px;font-size:15px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:16px 0}
+.stat{background:#f1f5f9;border-radius:8px;padding:12px;font-size:12px;color:#475569}
+.stat strong{display:block;color:#172033;font-size:18px;margin-top:5px}
+.action{font-size:13px;color:#0f172a;background:#f1f5f9;border-radius:6px;margin-top:7px;padding:7px 9px;line-height:1.7}.action b{font-weight:750}.load{color:#0f766e;font-weight:700} h2{font-size:17px;margin:18px 0 8px}.visit{border-bottom:1px solid #e5e7eb;padding:10px 0;display:flex;gap:10px;align-items:flex-start}
+.num{display:inline-flex;background:#334155;color:#fff;border-radius:20px;min-width:27px;height:27px;align-items:center;justify-content:center;font-size:12px;font-weight:bold}
+.name{font-size:14px;font-weight:700}.desc{font-size:12px;color:#64748b;margin-top:3px}
+.note{color:#64748b;font-size:12px;line-height:1.7;margin-top:15px}
+#map{height:80vh;min-height:560px;width:100%;background:#eef2f7}
+.stop-badge{background:#fff;border:2px solid #111827;border-radius:50%;min-width:27px;height:27px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;box-shadow:0 1px 5px #0004}
+.direction{font-size:23px;font-weight:bold;line-height:23px;text-shadow:0 0 2px #fff,0 0 3px #fff;pointer-events:none}
+footer{padding:10px 20px;background:#fff;color:#64748b;font-size:12px}
+@media(max-width:750px){.layout{display:block}aside{max-height:none}#map{height:65vh;min-height:430px}}
 </style>
-<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=__JS_KEY__&autoload=false"></script>
-</head><body>
-<div class="header"><h1>따릉이 재배치 · 차량별 최적 경로</h1><p class="hint">차량을 선택하면 해당 차량의 이동 경로·방향·방문 순서만 표시됩니다.</p></div>
-<div id="status"></div>
-<div class="shell">
-<aside class="panel">
-<label for="vehicleSelect">확인할 차량</label><select id="vehicleSelect"></select>
+</head>
+<body>
+<header><h1>따릉이 재배치 · 차량별 최적 경로</h1><p>차량을 선택하면 방문 순서와 해당 차량의 이동 경로만 표시됩니다.</p></header>
+<div id="status">데이터 로딩 중...</div>
+<div class="layout"><aside>
+<label for="vehicleSelect">확인할 차량</label>
+<select id="vehicleSelect"><option value="">차량 데이터 확인 중...</option></select>
 <div id="stats" class="stats"></div>
-<div class="subhead">방문 순서</div><div id="visits"></div>
-<div class="legend">● 빨강: 수거 대여소　● 파랑: 배송 대여소　● 회색: 균형<br>지도 숫자 = 실제 대여소 방문 순번<br>화살표 = 도로 경로의 진행 방향</div>
-</aside><div class="mapwrap"><div id="map"></div></div>
-</div><div class="footer">Gurobi 작업완료시간은 차량 이동·상하차·주정차 시간을 포함합니다. 카카오 주행시간은 도로 이동시간만 나타냅니다.</div>
+<h2>방문 순서</h2><div id="visits"></div>
+<div class="note">빨강: 수거 / 파랑: 배송 / 회색: 재고 균형<br>지도 숫자: 방문 순서 · 화살표: 진행 방향</div>
+</aside><div id="map"></div></div>
+<footer>Gurobi 완료시간은 상하차·주정차 시간을 포함합니다. 카카오 주행시간은 도로 이동시간만 포함합니다.</footer>
+<script id="route-data" type="application/json">{"depot": {"lat": 37.654, "lon": 127.057}, "stations": [{"id": "1", "name": "태릉입구역 3번출구", "lat": 37.6192, "lon": 127.075, "current": 20, "target": 10, "type": "pickup"}, {"id": "2", "name": "공릉역 1번출구 앞", "lat": 37.6266, "lon": 127.073, "current": 25, "target": 10, "type": "pickup"}, {"id": "3", "name": "화랑대역 2번출구 앞", "lat": 37.6204, "lon": 127.084, "current": 15, "target": 20, "type": "delivery"}, {"id": "4", "name": "과기대 입구(우)", "lat": 37.6299, "lon": 127.077, "current": 10, "target": 20, "type": "delivery"}, {"id": "5", "name": "서울여대 남문", "lat": 37.6253, "lon": 127.088, "current": 5, "target": 7, "type": "delivery"}, {"id": "6", "name": "태릉입구역 8번출구", "lat": 37.6174, "lon": 127.075, "current": 15, "target": 10, "type": "pickup"}, {"id": "7", "name": "삼육대 입구", "lat": 37.6385, "lon": 127.108, "current": 5, "target": 10, "type": "delivery"}, {"id": "8", "name": "공릉 1단지 아파트", "lat": 37.6311, "lon": 127.07, "current": 15, "target": 15, "type": "balanced"}, {"id": "9", "name": "육군사관학교 앞", "lat": 37.6232, "lon": 127.09, "current": 5, "target": 15, "type": "delivery"}, {"id": "10", "name": "삼육대 도서관", "lat": 37.6428, "lon": 127.107, "current": 5, "target": 10, "type": "delivery"}, {"id": "11", "name": "삼육대 제3과학관", "lat": 37.6427, "lon": 127.108, "current": 6, "target": 7, "type": "delivery"}, {"id": "12", "name": "태릉입구역 5번출구", "lat": 37.6183, "lon": 127.076, "current": 30, "target": 20, "type": "pickup"}, {"id": "13", "name": "원자력병원", "lat": 37.6284, "lon": 127.0822704, "current": 8, "target": 10, "type": "delivery"}], "routes": [{"vehicle": 1, "color": "#238B45", "stops": ["DEPOT", "1", "2", "3", "12", "9", "12", "4", "5", "6", "7", "9", "10", "11", "9", "10", "DEPOT"], "visits": [{"order": 0, "label": "DEPOT", "name": "Depot", "lat": 37.654, "lon": 127.057, "type": "depot", "current": null, "target": null, "pickup_qty": 0, "delivery_qty": 0, "load_after": 0, "capacity": 30}, {"order": 1, "label": "1", "name": "태릉입구역 3번출구", "lat": 37.6192, "lon": 127.075, "type": "pickup", "current": 20, "target": 10, "pickup_qty": 10, "delivery_qty": 0, "load_after": 10, "capacity": 30}, {"order": 2, "label": "2", "name": "공릉역 1번출구 앞", "lat": 37.6266, "lon": 127.073, "type": "pickup", "current": 25, "target": 10, "pickup_qty": 15, "delivery_qty": 0, "load_after": 25, "capacity": 30}, {"order": 3, "label": "3", "name": "화랑대역 2번출구 앞", "lat": 37.6204, "lon": 127.084, "type": "delivery", "current": 15, "target": 20, "pickup_qty": 0, "delivery_qty": 5, "load_after": 20, "capacity": 30}, {"order": 4, "label": "12", "name": "태릉입구역 5번출구", "lat": 37.6183, "lon": 127.076, "type": "pickup", "current": 30, "target": 20, "pickup_qty": 5, "delivery_qty": 0, "load_after": 25, "capacity": 30}, {"order": 5, "label": "9", "name": "육군사관학교 앞", "lat": 37.6232, "lon": 127.09, "type": "delivery", "current": 5, "target": 15, "pickup_qty": 0, "delivery_qty": 3, "load_after": 22, "capacity": 30}, {"order": 6, "label": "12", "name": "태릉입구역 5번출구", "lat": 37.6183, "lon": 127.076, "type": "pickup", "current": 30, "target": 20, "pickup_qty": 1, "delivery_qty": 0, "load_after": 23, "capacity": 30}, {"order": 7, "label": "4", "name": "과기대 입구(우)", "lat": 37.6299, "lon": 127.077, "type": "delivery", "current": 10, "target": 20, "pickup_qty": 0, "delivery_qty": 10, "load_after": 13, "capacity": 30}, {"order": 8, "label": "5", "name": "서울여대 남문", "lat": 37.6253, "lon": 127.088, "type": "delivery", "current": 5, "target": 7, "pickup_qty": 0, "delivery_qty": 2, "load_after": 11, "capacity": 30}, {"order": 9, "label": "6", "name": "태릉입구역 8번출구", "lat": 37.6174, "lon": 127.075, "type": "pickup", "current": 15, "target": 10, "pickup_qty": 5, "delivery_qty": 0, "load_after": 16, "capacity": 30}, {"order": 10, "label": "7", "name": "삼육대 입구", "lat": 37.6385, "lon": 127.108, "type": "delivery", "current": 5, "target": 10, "pickup_qty": 0, "delivery_qty": 5, "load_after": 11, "capacity": 30}, {"order": 11, "label": "9", "name": "육군사관학교 앞", "lat": 37.6232, "lon": 127.09, "type": "delivery", "current": 5, "target": 15, "pickup_qty": 0, "delivery_qty": 5, "load_after": 6, "capacity": 30}, {"order": 12, "label": "10", "name": "삼육대 도서관", "lat": 37.6428, "lon": 127.107, "type": "delivery", "current": 5, "target": 10, "pickup_qty": 0, "delivery_qty": 1, "load_after": 5, "capacity": 30}, {"order": 13, "label": "11", "name": "삼육대 제3과학관", "lat": 37.6427, "lon": 127.108, "type": "delivery", "current": 6, "target": 7, "pickup_qty": 0, "delivery_qty": 1, "load_after": 4, "capacity": 30}, {"order": 14, "label": "9", "name": "육군사관학교 앞", "lat": 37.6232, "lon": 127.09, "type": "delivery", "current": 5, "target": 15, "pickup_qty": 0, "delivery_qty": 2, "load_after": 2, "capacity": 30}, {"order": 15, "label": "10", "name": "삼육대 도서관", "lat": 37.6428, "lon": 127.107, "type": "delivery", "current": 5, "target": 10, "pickup_qty": 0, "delivery_qty": 2, "load_after": 0, "capacity": 30}, {"order": 16, "label": "DEPOT", "name": "Depot", "lat": 37.654, "lon": 127.057, "type": "depot", "current": null, "target": null, "pickup_qty": 0, "delivery_qty": 0, "load_after": 0, "capacity": 30}], "coords": [[37.654, 127.057], [37.6192, 127.075], [37.6266, 127.073], [37.6204, 127.084], [37.6183, 127.076], [37.6232, 127.09], [37.6183, 127.076], [37.6299, 127.077], [37.6253, 127.088], [37.6174, 127.075], [37.6385, 127.108], [37.6232, 127.09], [37.6428, 127.107], [37.6427, 127.108], [37.6232, 127.09], [37.6428, 127.107], [37.654, 127.057]], "drive_min": null, "drive_km": null, "completion_min": 299.5015482928937}, {"vehicle": 2, "color": "#7C3AED", "stops": ["DEPOT", "12", "10", "12", "10", "13", "DEPOT"], "visits": [{"order": 0, "label": "DEPOT", "name": "Depot", "lat": 37.654, "lon": 127.057, "type": "depot", "current": null, "target": null, "pickup_qty": 0, "delivery_qty": 0, "load_after": 0, "capacity": 30}, {"order": 1, "label": "12", "name": "태릉입구역 5번출구", "lat": 37.6183, "lon": 127.076, "type": "pickup", "current": 30, "target": 20, "pickup_qty": 1, "delivery_qty": 0, "load_after": 1, "capacity": 30}, {"order": 2, "label": "10", "name": "삼육대 도서관", "lat": 37.6428, "lon": 127.107, "type": "delivery", "current": 5, "target": 10, "pickup_qty": 0, "delivery_qty": 1, "load_after": 0, "capacity": 30}, {"order": 3, "label": "12", "name": "태릉입구역 5번출구", "lat": 37.6183, "lon": 127.076, "type": "pickup", "current": 30, "target": 20, "pickup_qty": 2, "delivery_qty": 0, "load_after": 2, "capacity": 30}, {"order": 4, "label": "10", "name": "삼육대 도서관", "lat": 37.6428, "lon": 127.107, "type": "delivery", "current": 5, "target": 10, "pickup_qty": 0, "delivery_qty": 1, "load_after": 1, "capacity": 30}, {"order": 5, "label": "13", "name": "원자력병원", "lat": 37.6284, "lon": 127.0822704, "type": "delivery", "current": 8, "target": 10, "pickup_qty": 0, "delivery_qty": 1, "load_after": 0, "capacity": 30}, {"order": 6, "label": "DEPOT", "name": "Depot", "lat": 37.654, "lon": 127.057, "type": "depot", "current": null, "target": null, "pickup_qty": 0, "delivery_qty": 0, "load_after": 0, "capacity": 30}], "coords": [[37.654, 127.057], [37.6183, 127.076], [37.6428, 127.107], [37.6183, 127.076], [37.6428, 127.107], [37.6284, 127.0822704], [37.654, 127.057]], "drive_min": null, "drive_km": null, "completion_min": 108.55633844156688}, {"vehicle": 3, "color": "#EA580C", "stops": ["DEPOT", "12", "13", "DEPOT"], "visits": [{"order": 0, "label": "DEPOT", "name": "Depot", "lat": 37.654, "lon": 127.057, "type": "depot", "current": null, "target": null, "pickup_qty": 0, "delivery_qty": 0, "load_after": 0, "capacity": 30}, {"order": 1, "label": "12", "name": "태릉입구역 5번출구", "lat": 37.6183, "lon": 127.076, "type": "pickup", "current": 30, "target": 20, "pickup_qty": 1, "delivery_qty": 0, "load_after": 1, "capacity": 30}, {"order": 2, "label": "13", "name": "원자력병원", "lat": 37.6284, "lon": 127.0822704, "type": "delivery", "current": 8, "target": 10, "pickup_qty": 0, "delivery_qty": 1, "load_after": 0, "capacity": 30}, {"order": 3, "label": "DEPOT", "name": "Depot", "lat": 37.654, "lon": 127.057, "type": "depot", "current": null, "target": null, "pickup_qty": 0, "delivery_qty": 0, "load_after": 0, "capacity": 30}], "coords": [[37.654, 127.057], [37.6183, 127.076], [37.6284, 127.0822704], [37.654, 127.057]], "drive_min": null, "drive_km": null, "completion_min": 43.772191090280444}], "actualRoad": false}</script>
 <script>
-const data=__PAYLOAD__;
-const byId=(id)=>document.getElementById(id);
-const statusNode=byId('status');
-const escapeHTML=(s)=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const fmt=(v,n=1)=>(v===null||v===undefined)?'—':Number(v).toFixed(n);
-function setError(text){statusNode.textContent=text;}
-const select=byId('vehicleSelect');
-for(const r of data.routes){const o=document.createElement('option');o.value=String(r.vehicle);o.textContent='차량 '+r.vehicle;select.appendChild(o);}
-if(!window.kakao||!kakao.maps){setError('카카오 지도 SDK 로딩 실패: JavaScript 키와 등록된 사이트 도메인을 확인하세요.');}
-else{kakao.maps.load(function(){
- try{
- const center=new kakao.maps.LatLng(data.depot.lat,data.depot.lon);
- const map=new kakao.maps.Map(byId('map'),{center:center,level:5});
- const info=new kakao.maps.InfoWindow({removable:true});
- let active=[];
- const depotMarker=new kakao.maps.Marker({map:map,position:center,title:'Depot'});
- kakao.maps.event.addListener(depotMarker,'click',()=>{info.setContent('<div style="padding:9px">Depot (출발·복귀)</div>');info.open(map,depotMarker);});
- // 13개 대여소 위치는 항상 보이게 하되, 차량 선택 시 경로·순번만 교체
- const stationCircles=[];
- for(const s of data.stations){
-   const pos=new kakao.maps.LatLng(s.lat,s.lon);
-   const c=s.type==='pickup'?'#d32f2f':s.type==='delivery'?'#1976d2':'#757575';
-   const circle=new kakao.maps.Circle({map:map,center:pos,radius:12,strokeWeight:2,strokeColor:c,fillColor:c,fillOpacity:0.75});
-   kakao.maps.event.addListener(circle,'click',()=>{
-      info.setContent('<div style="padding:9px;white-space:nowrap">'+escapeHTML(s.name)+'<br>현재 '+s.current+'대 → 목표 '+s.target+'대</div>');
-      info.setPosition(pos);info.open(map);
-   });stationCircles.push(circle);
- }
- function addActive(item){active.push(item);}
- function clearActive(){for(const item of active)item.setMap(null);active=[];info.close();}
- // 도로 좌표 거리 누적으로 방향 화살표를 균등하게 배치
- function arrowsOnRoute(coords,color){
-   if(coords.length<3)return;
-   const dist=[0];let total=0;
-   for(let i=1;i<coords.length;i++){
-      const a=coords[i-1],b=coords[i];const lat=(a[0]+b[0])*Math.PI/360;
-      const dx=(b[1]-a[1])*Math.cos(lat),dy=(b[0]-a[0]);
-      total+=Math.hypot(dx,dy);dist.push(total);
-   }
-   if(total<=0)return;
-   const count=Math.max(2,Math.min(12,Math.ceil(total*111000/650)));
-   for(let j=1;j<=count;j++){
-     const target=total*j/(count+1);
-     let i=1;while(i<dist.length-1 && dist[i]<target)i++;
-     const a=coords[i-1],b=coords[i],span=dist[i]-dist[i-1];if(span<=0)continue;
-     const t=Math.max(0,Math.min(1,(target-dist[i-1])/span));
-     const lat=a[0]+(b[0]-a[0])*t,lon=a[1]+(b[1]-a[1])*t;
-     const dx=(b[1]-a[1])*Math.cos(lat*Math.PI/180),dy=-(b[0]-a[0]);
-     const angle=Math.atan2(dy,dx)*180/Math.PI;
-     const element=document.createElement('div');element.className='arrow';element.textContent='➤';
-     element.style.color=color;element.style.transform='rotate('+angle+'deg)';
-     const arrow=new kakao.maps.CustomOverlay({map:map,position:new kakao.maps.LatLng(lat,lon),content:element,xAnchor:0.5,yAnchor:0.5,zIndex:7});
-     addActive(arrow);
-   }
- }
- function renderVehicle(){
-   clearActive();const r=data.routes.find(v=>String(v.vehicle)===select.value);if(!r)return;
-   const bounds=new kakao.maps.LatLngBounds();
-   const pts=r.coords.map(p=>new kakao.maps.LatLng(p[0],p[1]));
-   const line=new kakao.maps.Polyline({map:map,path:pts,strokeWeight:6,strokeColor:r.color,strokeOpacity:0.88,zIndex:3});addActive(line);
-   pts.forEach(p=>bounds.extend(p));arrowsOnRoute(r.coords,r.color);
-   const occurrence={};
-   r.visits.forEach((v,i)=>{
-     const pos=new kakao.maps.LatLng(v.lat,v.lon);bounds.extend(pos);
-     if(i===0||i===r.visits.length-1)return; // Depot는 별도 마커
-     const count=occurrence[v.label]||0;occurrence[v.label]=count+1;
-     const badge=document.createElement('div');badge.className='stop-badge';
-     badge.style.borderColor=r.color;badge.textContent=String(i);
-     // 같은 대여소 재방문이면 순번 마커가 완전히 겹치지 않도록 옆으로 이동
-     badge.style.transform='translateX('+(count*22)+'px)';
-     badge.title=i+'. '+v.name;
-     const overlay=new kakao.maps.CustomOverlay({map:map,position:pos,content:badge,xAnchor:0.5,yAnchor:1.3,zIndex:9});addActive(overlay);
-   });
-   byId('stats').innerHTML=
-      '<div class="stat"><small>방문 대여소 수 (재방문 포함)</small><b>'+Math.max(0,r.visits.length-2)+'</b></div>'+
-      '<div class="stat"><small>도로 주행거리</small><b>'+fmt(r.drive_km,2)+' km</b></div>'+
-      '<div class="stat"><small>카카오 도로 주행시간</small><b>'+fmt(r.drive_min,1)+' 분</b></div>'+
-      '<div class="stat"><small>Gurobi 완료시간</small><b>'+fmt(r.completion_min,1)+' 분</b></div>';
-   byId('visits').innerHTML=r.visits.map((v,i)=>{
-     const tag=i===0?'출발':i===r.visits.length-1?'복귀':'방문 '+i;
-     const extra=v.type==='pickup'?'수거 대상 대여소':v.type==='delivery'?'배송 대상 대여소':v.type==='balanced'?'재고 균형':'Depot';
-     const stocks=(v.current===null)?'':' · 현재 '+v.current+'대 / 목표 '+v.target+'대';
-     return '<div class="visit"><span class="num" style="background:'+r.color+'">'+i+'</span><div><div class="visitname">'+escapeHTML(v.name)+'</div><div class="visitsub">'+tag+' · '+extra+stocks+'</div></div></div>';
-   }).join('');
-   map.setBounds(bounds);setTimeout(()=>map.relayout(),0);
- }
- select.addEventListener('change',renderVehicle);
- if(data.routes.length){select.value=String(data.routes[0].vehicle);renderVehicle();}
- if(!data.actualRoad)setError('주의: estimate 모드이므로 직선 연결은 실제 도로 경로가 아닙니다.');
- }catch(e){console.error(e);setError('지도 표시 오류: '+e.message);}
-});}
-</script></body></html>
+(function(){
+'use strict';
+const el=id=>document.getElementById(id);
+const status=msg=>{el('status').textContent=msg;};
+const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=(x,n=1)=>x==null||!Number.isFinite(Number(x))?'—':Number(x).toFixed(n);
+let data, map=null, current=[], info=null;
+function clearCurrent(){for(const x of current){try{x.setMap(null);}catch(e){console.warn(e);}}current=[];if(info)info.close();}
+function track(x){current.push(x);return x;}
+try{data=JSON.parse(el('route-data').textContent);}catch(e){status('경로 데이터 JSON 오류: '+e.message);console.error(e);return;}
+if(!Array.isArray(data.routes)||data.routes.length===0){status('차량 경로 데이터가 없습니다. 8번 셀의 routes 결과를 확인하세요.');return;}
+const select=el('vehicleSelect');select.innerHTML='';
+for(const r of data.routes){const opt=document.createElement('option');opt.value=String(r.vehicle);opt.textContent='차량 '+r.vehicle;select.appendChild(opt);}
+function renderInfo(r){
+  el('stats').innerHTML=
+    '<div class="stat">방문 횟수<strong>'+Math.max(0,(r.visits||[]).length-2)+'</strong></div>'+
+    '<div class="stat">주행거리<strong>'+fmt(r.drive_km,2)+' km</strong></div>'+
+    '<div class="stat">도로 주행시간<strong>'+fmt(r.drive_min)+' 분</strong></div>'+
+    '<div class="stat">Gurobi 완료시간<strong>'+fmt(r.completion_min)+' 분</strong></div>';
+  el('visits').innerHTML=(r.visits||[]).map((v,i)=>{
+    let kind=v.type==='pickup'?'수거':v.type==='delivery'?'배송':v.type==='balanced'?'균형':'Depot';
+    let note=i===0?'출발':i===r.visits.length-1?'복귀':`방문 ${i} · ${kind}`;
+    if(v.current!=null)note+=' · 현재 '+v.current+'대 / 목표 '+v.target+'대';
+    let action='';
+    if(i===0){
+      action='<div class="action">출발 적재량: <span class="load">0대</span></div>';
+    } else if(i===r.visits.length-1){
+      action='<div class="action">복귀 적재량: <span class="load">'+esc(v.load_after)+'대</span></div>';
+    } else {
+      const pickups=Number(v.pickup_qty||0), deliveries=Number(v.delivery_qty||0);
+      const parts=[];
+      if(pickups)parts.push('<b>수거 +'+pickups+'대</b>');
+      if(deliveries)parts.push('<b>배송 −'+deliveries+'대</b>');
+      if(!parts.length)parts.push('수거·배송 없음');
+      action='<div class="action">이번 방문: '+parts.join(' / ')+'<br>다음 이동 전 차량 적재량: <span class="load">'+esc(v.load_after)+'대 / '+esc(v.capacity)+'대</span></div>';
+    }
+    return '<div class="visit"><span class="num" style="background:'+esc(r.color)+'">'+i+'</span><div><div class="name">'+esc(v.name)+'</div><div class="desc">'+esc(note)+'</div>'+action+'</div></div>';
+  }).join('');
+}
+function addDirections(coords,color){
+  if(!Array.isArray(coords)||coords.length<2)return;
+  let d=[0], total=0;
+  for(let i=1;i<coords.length;i++){
+    let a=coords[i-1],b=coords[i],rad=(a[0]+b[0])*Math.PI/360;
+    total+=Math.hypot((b[1]-a[1])*Math.cos(rad),b[0]-a[0]);d.push(total);
+  }
+  if(total===0)return;
+  let count=Math.min(12,Math.max(2,Math.ceil(total*111000/800)));
+  for(let j=1;j<=count;j++){
+    let target=total*j/(count+1),i=1;
+    while(i<d.length-1&&d[i]<target)i++;
+    let a=coords[i-1],b=coords[i],span=d[i]-d[i-1];if(span<=0)continue;
+    let t=(target-d[i-1])/span,lat=a[0]+(b[0]-a[0])*t,lon=a[1]+(b[1]-a[1])*t;
+    let dx=(b[1]-a[1])*Math.cos(lat*Math.PI/180),dy=-(b[0]-a[0]);
+    let marker=document.createElement('span');marker.className='direction';marker.textContent='➤';marker.style.color=color;
+    marker.style.transform='rotate('+Math.atan2(dy,dx)*180/Math.PI+'deg)';
+    track(new kakao.maps.CustomOverlay({map,position:new kakao.maps.LatLng(lat,lon),content:marker,xAnchor:.5,yAnchor:.5,zIndex:5}));
+  }
+}
+function renderVehicle(){
+  const r=data.routes.find(x=>String(x.vehicle)===select.value);if(!r)return;
+  renderInfo(r); // 카카오 SDK와 무관하게 목록은 먼저 보여준다.
+  if(!map)return;
+  try{
+    clearCurrent();
+    let bounds=new kakao.maps.LatLngBounds();
+    const pts=r.coords.map(p=>new kakao.maps.LatLng(p[0],p[1]));
+    if(pts.length>=2){track(new kakao.maps.Polyline({map,path:pts,strokeWeight:6,strokeColor:r.color,strokeOpacity:.85}));pts.forEach(p=>bounds.extend(p));}
+    addDirections(r.coords,r.color);
+    let repetitions={};
+    (r.visits||[]).forEach((v,i)=>{
+      const pos=new kakao.maps.LatLng(v.lat,v.lon);bounds.extend(pos);
+      if(i===0||i===r.visits.length-1)return;
+      const n=repetitions[v.label]||0;repetitions[v.label]=n+1;
+      let badge=document.createElement('div');badge.className='stop-badge';badge.style.borderColor=r.color;badge.textContent=String(i);
+      badge.title=i+'번째 방문: '+v.name;badge.style.transform='translateX('+(n*19)+'px)';
+      track(new kakao.maps.CustomOverlay({map,position:pos,content:badge,xAnchor:.5,yAnchor:1.2,zIndex:8}));
+    });
+    map.setBounds(bounds);map.relayout();
+  }catch(e){console.error(e);status('경로 렌더링 오류: '+e.message);}
+}
+select.addEventListener('change',renderVehicle);select.value=String(data.routes[0].vehicle);renderVehicle();
+status('차량 데이터 로딩 완료. 카카오 지도 연결 중...');
+// 데이터와 차량 메뉴를 렌더링한 다음 SDK 로딩을 시작한다.
+const sdk=document.createElement('script');
+sdk.src='https://dapi.kakao.com/v2/maps/sdk.js?appkey=f9ca362d1eb07a0c7a0f9454949f4e0a&autoload=false';
+sdk.onerror=()=>status('카카오 지도 SDK 다운로드 실패: JavaScript 키, 앱의 카카오맵 사용 설정, GitHub Pages 도메인을 확인하세요.');
+sdk.onload=()=>{
+  if(!window.kakao||!kakao.maps){status('카카오 SDK 응답은 왔지만 maps 객체가 없습니다. 앱 설정·키·브라우저 콘솔을 확인하세요.');return;}
+  kakao.maps.load(()=>{
+    try{
+      const center=new kakao.maps.LatLng(data.depot.lat,data.depot.lon);
+      map=new kakao.maps.Map(el('map'),{center,level:5});
+      info=new kakao.maps.InfoWindow({removable:true});
+      let depot=new kakao.maps.Marker({map,position:center,title:'Depot'});
+      kakao.maps.event.addListener(depot,'click',()=>{info.setContent('<div style="padding:8px">Depot (출발·복귀)</div>');info.open(map,depot);});
+      for(const s of data.stations||[]){
+        const pos=new kakao.maps.LatLng(s.lat,s.lon);
+        const color=s.type==='pickup'?'#d32f2f':s.type==='delivery'?'#1976d2':'#757575';
+        let circle=new kakao.maps.Circle({map,center:pos,radius:12,strokeWeight:2,strokeColor:color,fillColor:color,fillOpacity:.75});
+        kakao.maps.event.addListener(circle,'click',()=>{
+          info.setContent('<div style="padding:8px;white-space:nowrap">'+esc(s.name)+'<br>현재 '+s.current+'대 / 목표 '+s.target+'대</div>');
+          info.setPosition(pos);info.open(map);
+        });
+      }
+      renderVehicle();status(data.actualRoad?'':'주의: estimate 모드라 직선 경로는 실제 도로 경로가 아닙니다.');
+    }catch(e){console.error(e);status('카카오 지도 초기화 오류: '+e.message);}
+  });
+};
+document.head.appendChild(sdk);
+})();
+</script>
+</body></html>
