@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>따릉이 재배치 최적 경로</title>
+<style>
+body {margin:0;font-family:Arial,sans-serif;background:#fff}
+#header {padding:12px 16px;font-size:17px;font-weight:bold}
+#status {padding:0 16px 10px;color:#b71c1c;font-size:13px}
+#map {width:100%;height:78vh;min-height:480px}
+#legend {padding:12px 16px;font-size:14px;line-height:1.8}
+.dot {display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:5px}
+</style>
+<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=f9ca362d1eb07a0c7a0f9454949f4e0a&autoload=false"></script>
+</head><body>
+<div id="header">따릉이 재배치: 차량별 최적 경로</div>
+<div id="status"></div><div id="map"></div><div id="legend"></div>
+<script>
+const data = {"depot": {"lat": 37.654, "lon": 127.057}, "stations": [{"name": "태릉입구역 3번출구", "lat": 37.6192, "lon": 127.075, "current": 20, "target": 10, "type": "pickup", "quantity": 10}, {"name": "공릉역 1번출구 앞", "lat": 37.6266, "lon": 127.073, "current": 25, "target": 10, "type": "pickup", "quantity": 15}, {"name": "화랑대역 2번출구 앞", "lat": 37.6204, "lon": 127.084, "current": 15, "target": 20, "type": "delivery", "quantity": 5}, {"name": "과기대 입구(우)", "lat": 37.6299, "lon": 127.077, "current": 10, "target": 20, "type": "delivery", "quantity": 10}, {"name": "서울여대 남문", "lat": 37.6253, "lon": 127.088, "current": 5, "target": 7, "type": "delivery", "quantity": 2}, {"name": "태릉입구역 8번출구", "lat": 37.6174, "lon": 127.075, "current": 15, "target": 10, "type": "pickup", "quantity": 5}, {"name": "삼육대 입구", "lat": 37.6385, "lon": 127.108, "current": 5, "target": 10, "type": "delivery", "quantity": 5}, {"name": "공릉 1단지 아파트", "lat": 37.6311, "lon": 127.07, "current": 15, "target": 15, "type": "balanced", "quantity": 0}, {"name": "육군사관학교 앞", "lat": 37.6232, "lon": 127.09, "current": 5, "target": 15, "type": "delivery", "quantity": 10}, {"name": "삼육대 도서관", "lat": 37.6428, "lon": 127.107, "current": 5, "target": 10, "type": "delivery", "quantity": 5}, {"name": "삼육대 제3과학관", "lat": 37.6427, "lon": 127.108, "current": 6, "target": 7, "type": "delivery", "quantity": 1}, {"name": "태릉입구역 5번출구", "lat": 37.6183, "lon": 127.076, "current": 30, "target": 20, "type": "pickup", "quantity": 10}, {"name": "원자력병원", "lat": 37.6284, "lon": 127.0822704, "current": 8, "target": 10, "type": "delivery", "quantity": 2}], "routes": [{"vehicle": 1, "color": "#2E7D32", "stops": ["DEPOT", "2", "12", "2", "9", "4", "7", "9", "3", "6", "4", "9", "12", "1", "10", "2", "3", "12", "9", "12", "3", "4", "7", "10", "4", "7", "12", "1", "9", "5", "1", "4", "DEPOT"], "coords": [[37.654, 127.057], [37.6266, 127.073], [37.6183, 127.076], [37.6266, 127.073], [37.6232, 127.09], [37.6299, 127.077], [37.6385, 127.108], [37.6232, 127.09], [37.6204, 127.084], [37.6174, 127.075], [37.6299, 127.077], [37.6232, 127.09], [37.6183, 127.076], [37.6192, 127.075], [37.6428, 127.107], [37.6266, 127.073], [37.6204, 127.084], [37.6183, 127.076], [37.6232, 127.09], [37.6183, 127.076], [37.6204, 127.084], [37.6299, 127.077], [37.6385, 127.108], [37.6428, 127.107], [37.6299, 127.077], [37.6385, 127.108], [37.6183, 127.076], [37.6192, 127.075], [37.6232, 127.09], [37.6253, 127.088], [37.6192, 127.075], [37.6299, 127.077], [37.654, 127.057]]}, {"vehicle": 2, "color": "#7B1FA2", "stops": ["DEPOT", "2", "9", "2", "6", "1", "6", "10", "13", "12", "4", "3", "6", "9", "1", "12", "1", "3", "4", "13", "10", "12", "2", "9", "4", "2", "5", "11", "1", "7", "4", "2", "4", "DEPOT"], "coords": [[37.654, 127.057], [37.6266, 127.073], [37.6232, 127.09], [37.6266, 127.073], [37.6174, 127.075], [37.6192, 127.075], [37.6174, 127.075], [37.6428, 127.107], [37.6284, 127.0822704], [37.6183, 127.076], [37.6299, 127.077], [37.6204, 127.084], [37.6174, 127.075], [37.6232, 127.09], [37.6192, 127.075], [37.6183, 127.076], [37.6192, 127.075], [37.6204, 127.084], [37.6299, 127.077], [37.6284, 127.0822704], [37.6428, 127.107], [37.6183, 127.076], [37.6266, 127.073], [37.6232, 127.09], [37.6299, 127.077], [37.6266, 127.073], [37.6253, 127.088], [37.6427, 127.108], [37.6192, 127.075], [37.6385, 127.108], [37.6299, 127.077], [37.6266, 127.073], [37.6299, 127.077], [37.654, 127.057]]}], "actualRoad": false};
+const statusNode = document.getElementById('status');
+function showError(msg) { statusNode.textContent = msg; }
+if (!window.kakao || !kakao.maps) {
+  showError('카카오 지도 SDK 로딩 실패: JavaScript 키와 웹 도메인 등록을 확인하세요.');
+} else {
+ kakao.maps.load(function() {
+  try {
+    const center = new kakao.maps.LatLng(data.depot.lat, data.depot.lon);
+    const map = new kakao.maps.Map(document.getElementById('map'), {center:center, level:5});
+    const bounds = new kakao.maps.LatLngBounds();
+    const info = new kakao.maps.InfoWindow({removable:true});
+    const depotMarker = new kakao.maps.Marker({position:center, map:map});
+    kakao.maps.event.addListener(depotMarker,'click', function() {
+      info.setContent('<div style="padding:8px">DEPOT (출발·복귀)</div>');
+      info.open(map,depotMarker);
+    });
+    bounds.extend(center);
+
+    for (const s of data.stations) {
+      const pos = new kakao.maps.LatLng(s.lat,s.lon);
+      const color = s.type === 'pickup' ? '#d32f2f' : s.type === 'delivery' ? '#1976d2' : '#757575';
+      const circle = new kakao.maps.Circle({map:map, center:pos,radius:15,
+             strokeWeight:2,strokeColor:color,fillColor:color,fillOpacity:0.75});
+      kakao.maps.event.addListener(circle,'click',function() {
+        const txt = s.name + ' | 현재 ' + s.current + '대 → 목표 ' + s.target + '대';
+        info.setContent('<div style="padding:9px;white-space:nowrap">'+
+          txt.replace(/[&<>"']/g, v=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[v]))+'</div>');
+        info.setPosition(pos);info.open(map);
+      });
+      bounds.extend(pos);
+    }
+    let legend = '<b>빨강: 수거 대여소 / 파랑: 배송 대여소 / 회색: 균형</b>';
+    for (const route of data.routes) {
+      const pts = route.coords.map(p => new kakao.maps.LatLng(p[0],p[1]));
+      if (pts.length < 2) continue;
+      const line = new kakao.maps.Polyline({map:map,path:pts,
+             strokeWeight:5,strokeColor:route.color,strokeOpacity:0.8});
+      pts.forEach(p=>bounds.extend(p));
+      legend += '<div><span class="dot" style="background:'+route.color+'"></span>'+ 
+                '차량 '+route.vehicle+' ('+(route.stops.length-2)+' 경유 방문)</div>';
+    }
+    document.getElementById('legend').innerHTML = legend;
+    map.setBounds(bounds);
+    if (!data.actualRoad) showError('주의: 현재 estimate 모드로, 직선 연결은 실제 도로 경로가 아닙니다.');
+  } catch(e) { showError('지도 표시 오류: '+ e.message); }
+ });
+}
+</script></body></html>
